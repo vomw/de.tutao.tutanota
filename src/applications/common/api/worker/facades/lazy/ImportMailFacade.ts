@@ -188,7 +188,7 @@ export class ImportMailFacade {
 				importMailData2,
 				sk,
 				mailGroupKey,
-				AeadCipherVersion.WithSessionKey,
+				AeadCipherVersion.WithSessionKey, // TODO: Check if this can be instance key
 			)
 
 			const encImport2 = createStringWrapper({
@@ -316,7 +316,7 @@ export class ImportMailFacade {
 			deduplicatedImportedAttachment = createImportedDeduplicatedImportedAttachment({
 				_ownerEncSessionKey: ownerEncFileHashSessionKey.key,
 				_ownerKeyVersion: ownerEncFileHashSessionKey.encryptingKeyVersion.toString(),
-				_kdfNonce: this.cryptoWrapper.generateKdfNonce(),
+				_kdfNonce: this.cryptoWrapper.generateKdfNonce(), // TODO: is this used
 				attachmentHash: fileHash,
 			})
 		}
@@ -324,7 +324,7 @@ export class ImportMailFacade {
 		const file = createFileTransferAggregatedType({
 			_ownerEncSessionKey: ownerEncFileSessionKey.key,
 			_ownerKeyVersion: ownerEncFileSessionKey.encryptingKeyVersion.toString(),
-			_kdfNonce: null,
+			_kdfNonce: null, // TODO: why is this null
 			cid: newFile.cid ?? null,
 			name: newFile.name,
 			mimeType: newFile.mimeType,
