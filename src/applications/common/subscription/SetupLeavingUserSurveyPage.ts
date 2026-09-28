@@ -1,11 +1,12 @@
 import m, { Children, Component, Vnode } from "mithril"
 import { Styles } from "../../../ui/styles.js"
-import { PrimaryButton } from "../../../ui/base/buttons/VariantButtons.js"
+import { PrimaryButton, SecondaryButton } from "../../../ui/base/buttons/VariantButtons.js"
 import { lang, TranslationKey } from "../../../ui/utils/LanguageViewModel.js"
 import { DynamicColorSvg } from "../../../ui/base/DynamicColorSvg.js"
 
 export interface SetupLeavingUserSurveyPageAttrs {
 	closeAction: () => void
+	skipAction: () => void
 	nextButtonLabel: TranslationKey
 	nextButtonEnabled: boolean
 	image: string
@@ -53,7 +54,7 @@ export class SetupLeavingUserSurveyPage implements Component<SetupLeavingUserSur
 					),
 					vnode.children,
 					m(
-						".full-width",
+						".full-width.flex.col.gap-8",
 						{
 							style: {
 								margin: Styles.get().isDesktopLayout() ? "auto 0 0 0" : "16px 0 0 0", // positions the button at the very bottom of the flex wrapper box for consistency
@@ -62,8 +63,12 @@ export class SetupLeavingUserSurveyPage implements Component<SetupLeavingUserSur
 						m(PrimaryButton, {
 							label: vnode.attrs.nextButtonLabel,
 							onclick: () => vnode.attrs.closeAction(),
-							class: vnode.attrs.nextButtonEnabled ? "no-hover disabled-button" : "",
-							disabled: vnode.attrs.nextButtonEnabled,
+							class: !vnode.attrs.nextButtonEnabled ? "no-hover disabled-button" : "",
+							disabled: !vnode.attrs.nextButtonEnabled,
+						}),
+						m(SecondaryButton, {
+							label: "skip_action",
+							onclick: () => vnode.attrs.skipAction(),
 						}),
 					),
 				],

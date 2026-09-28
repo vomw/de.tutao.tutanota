@@ -1,18 +1,14 @@
 import { emitWizardEvent, WizardEventType, WizardPageAttrs, WizardPageN } from "../../../ui/base/WizardDialog.js"
 import { LeavingUserSurveyData } from "./LeavingUserSurveyWizard.js"
 import m, { Vnode, VnodeDOM } from "mithril"
-import { DropDownSelector, type DropDownSelectorAttrs, SelectorItem, SelectorItemList } from "../../../ui/base/DropDownSelector.js"
 import { HtmlEditor, HtmlEditorMode } from "../../../ui/editor/HtmlEditor.js"
-import { theme } from "../../../ui/theme.js"
-import { CATEGORY_TO_IMAGE, CATEGORY_TO_REASON, getCategoryType } from "./LeavingUserSurveyConstants.js"
-import { lang } from "../../../ui/utils/LanguageViewModel.js"
+import { CATEGORY_TO_IMAGE, getCategoryType } from "./LeavingUserSurveyConstants.js"
 import { Styles } from "../../../ui/styles.js"
 import { SetupLeavingUserSurveyPage } from "./SetupLeavingUserSurveyPage.js"
 import { getHtmlSanitizer } from "../misc/HtmlSanitizer"
 
-export class LeavingUserSurveyReasonPage implements WizardPageN<LeavingUserSurveyData> {
+export class LeavingUserSurveyFeedbackPage implements WizardPageN<LeavingUserSurveyData> {
 	private _dom: HTMLElement | null = null
-	private dropdownItemsFromCategory: SelectorItemList<NumberString | null> = []
 	private readonly customReasonEditor: HtmlEditor
 
 	constructor() {
@@ -31,8 +27,8 @@ export class LeavingUserSurveyReasonPage implements WizardPageN<LeavingUserSurve
 	}
 
 	oninit(vnode: Vnode<WizardPageAttrs<LeavingUserSurveyData>>) {
-		this.dropdownItemsFromCategory = this.getDropdownItemsFromCategory(vnode.attrs.data.category!)
-		vnode.attrs.data.reason = null
+		//Other reason, only set to avoid error thrown
+		vnode.attrs.data.reason = "33"
 	}
 
 	view(vnode: Vnode<WizardPageAttrs<LeavingUserSurveyData>>) {
@@ -46,7 +42,7 @@ export class LeavingUserSurveyReasonPage implements WizardPageN<LeavingUserSurve
 				},
 				skipAction: () => this.closeDialog(),
 				nextButtonLabel: "submit_action",
-				nextButtonEnabled: Boolean(vnode.attrs.data.reason),
+				nextButtonEnabled: true,
 				image: CATEGORY_TO_IMAGE.get(getCategoryType(vnode.attrs.data.category!))?.image!,
 				imageStyle: {
 					paddingBottom: "60px",
@@ -54,24 +50,7 @@ export class LeavingUserSurveyReasonPage implements WizardPageN<LeavingUserSurve
 				mainMessage: CATEGORY_TO_IMAGE.get(getCategoryType(vnode.attrs.data.category!))?.translationKey!,
 				secondaryMessage: "surveyReasonSecondaryMessage_label",
 			},
-			[
-				m(DropDownSelector, {
-					style: {
-						border: `2px solid ${theme.outline}`,
-						borderRadius: "6px",
-						padding: "4px 8px",
-					},
-					doShowBorder: false,
-					label: "surveyChooseReason_label",
-					items: this.dropdownItemsFromCategory, // will never be null, as it has to be set to access this page
-					selectedValue: vnode.attrs.data.reason,
-					selectionChangedHandler: (reason) => {
-						vnode.attrs.data.reason = reason
-					},
-					dropdownWidth: 350,
-				} satisfies DropDownSelectorAttrs<NumberString | null>),
-				m(".pt-16", m(this.customReasonEditor)),
-			],
+			m(".pt-16", m(this.customReasonEditor)),
 		)
 	}
 
@@ -79,14 +58,5 @@ export class LeavingUserSurveyReasonPage implements WizardPageN<LeavingUserSurve
 		if (this._dom) {
 			emitWizardEvent(this._dom, WizardEventType.CLOSE_DIALOG)
 		}
-	}
-
-	getDropdownItemsFromCategory(category: NumberString): SelectorItemList<NumberString | null> {
-		const categoryType = getCategoryType(category)
-		const reasonList = CATEGORY_TO_REASON.get(categoryType)
-		const unselected: SelectorItem<string | null>[] = [{ name: lang.get("experienceSamplingAnswer_label"), value: null }]
-
-		if (!reasonList) return []
-		return unselected.concat(reasonList.map((r) => ({ name: lang.get(r.translationKey), value: r.value })))
 	}
 }

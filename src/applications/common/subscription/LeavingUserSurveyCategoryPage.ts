@@ -18,8 +18,9 @@ export class LeavingUserSurveyCategoryPage implements WizardPageN<LeavingUserSur
 			SetupLeavingUserSurveyPage,
 			{
 				closeAction: () => this.showNextPage(),
+				skipAction: () => this.closeDialog(),
 				nextButtonLabel: "next_action",
-				nextButtonEnabled: !vnode.attrs.data.category,
+				nextButtonEnabled: Boolean(vnode.attrs.data.category),
 				image: "main",
 				mainMessage: "surveyMainMessageDelete_label",
 				secondaryMessage: vnode.attrs.data.showDowngradeMessage ? "surveySecondaryMessageDowngrade_label" : "surveySecondaryMessageDelete_label",
@@ -40,6 +41,11 @@ export class LeavingUserSurveyCategoryPage implements WizardPageN<LeavingUserSur
 				m(".mlr-4.mt-4", m("small", lang.get("cancellationConfirmation_msg"))),
 			],
 		)
+	}
+	private closeDialog(): void {
+		if (this._dom) {
+			emitWizardEvent(this._dom, WizardEventType.CLOSE_DIALOG)
+		}
 	}
 
 	private getCategoryDropdownItems(showPriceCategory: boolean) {
