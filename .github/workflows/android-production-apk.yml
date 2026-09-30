@@ -103,7 +103,8 @@ jobs:
           test -n "$apk_source"
 
           export METADATA_FILE="$metadata_file"
-          node --input-type=module <<'NODE' >> "$GITHUB_ENV"
+          metadata_env=$(mktemp)
+          node --input-type=module <<'NODE' | tee "$metadata_env" >> "$GITHUB_ENV"
           import fs from "node:fs"
 
           const metadata = JSON.parse(fs.readFileSync(process.env.METADATA_FILE, "utf8"))
@@ -122,6 +123,8 @@ jobs:
           console.log(`APK_FILE=${packageName}-v${versionName}-code${versionCode}-tutao-release-universal.apk`)
           NODE
 
+          source "$metadata_env"
+          rm "$metadata_env"
           mv "$apk_source" "$APK_FILE"
           sha256sum "$APK_FILE" > "$APK_FILE.sha256"
 
