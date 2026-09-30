@@ -31,7 +31,6 @@ jobs:
     env:
       JAVA_VERSION: "21"
       RUST_TARGETS: "aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android"
-      APK_SIGN_STORE: ${{ runner.temp }}/tutanota-release.jks
       APK_SIGN_STORE_PASS: ${{ secrets.APK_SIGN_STORE_PASS }}
       APK_SIGN_ALIAS: ${{ secrets.APK_SIGN_ALIAS }}
       APK_SIGN_KEY_PASS: ${{ secrets.APK_SIGN_KEY_PASS }}
@@ -80,8 +79,10 @@ jobs:
             echo "::error::Configure APK_SIGN_STORE_BASE64, APK_SIGN_STORE_PASS, APK_SIGN_ALIAS, and APK_SIGN_KEY_PASS repository secrets."
             exit 1
           fi
-          printf '%s' "$APK_SIGN_STORE_BASE64" | base64 --decode > "$APK_SIGN_STORE"
-          chmod 600 "$APK_SIGN_STORE"
+          keystore_path="$RUNNER_TEMP/tutanota-release.jks"
+          printf '%s' "$APK_SIGN_STORE_BASE64" | base64 --decode > "$keystore_path"
+          chmod 600 "$keystore_path"
+          echo "APK_SIGN_STORE=$keystore_path" >> "$GITHUB_ENV"
 
       - name: Build universal production APK
         run: node android.js --buildtype release prod
