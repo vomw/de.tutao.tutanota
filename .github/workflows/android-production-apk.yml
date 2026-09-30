@@ -72,6 +72,9 @@ jobs:
       - name: Install JavaScript dependencies
         run: npm ci
 
+      - name: Disable proactive app-update checks for this APK
+        run: python3 ci/disable_android_update_checks.py
+
       - name: Set up Emscripten for WebAssembly assets
         uses: ./.github/shared/setup-emscripten
         with:
