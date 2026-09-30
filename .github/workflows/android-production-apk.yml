@@ -1,0 +1,129 @@
+name: Build production Android APK
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  actions: none
+  checks: none
+  contents: read
+  deployments: none
+  id-token: none
+  issues: none
+  discussions: none
+  packages: none
+  pages: none
+  pull-requests: none
+  repository-projects: none
+  security-events: none
+  statuses: none
+
+jobs:
+  build-production-apk:
+    name: Build signed universal production APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      JAVA_VERSION: "21"
+      RUST_TARGETS: "aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android"
+      APK_SIGN_STORE: ${{ runner.temp }}/tutanota-release.jks
+      APK_SIGN_STORE_PASS: ${{ secrets.APK_SIGN_STORE_PASS }}
+      APK_SIGN_ALIAS: ${{ secrets.APK_SIGN_ALIAS }}
+      APK_SIGN_KEY_PASS: ${{ secrets.APK_SIGN_KEY_PASS }}
+
+    steps:
+      - name: Check out source and build submodules
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          submodules: "recursive"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "24.17.0"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install Java ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9 # v4.2.1
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+
+      - name: Install Android NDK required by the project
+        run: sdkmanager "ndk;28.2.13676358"
+
+      - name: Point Gradle at the runner SDK
+        run: printf 'sdk.dir=%s\n' "$ANDROID_HOME" > app-android/local.properties
+
+      - name: Set up Rust and Android targets
+        uses: ./.github/shared/setup-rust
+        env:
+          rust-targets: ${{ env.RUST_TARGETS }}
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Prepare release signing keystore
+        env:
+          APK_SIGN_STORE_BASE64: ${{ secrets.APK_SIGN_STORE_BASE64 }}
+        run: |
+          if [ -z "$APK_SIGN_STORE_BASE64" ] || [ -z "$APK_SIGN_STORE_PASS" ] || [ -z "$APK_SIGN_ALIAS" ] || [ -z "$APK_SIGN_KEY_PASS" ]; then
+            echo "::error::Configure APK_SIGN_STORE_BASE64, APK_SIGN_STORE_PASS, APK_SIGN_ALIAS, and APK_SIGN_KEY_PASS repository secrets."
+            exit 1
+          fi
+          printf '%s' "$APK_SIGN_STORE_BASE64" | base64 --decode > "$APK_SIGN_STORE"
+          chmod 600 "$APK_SIGN_STORE"
+
+      - name: Build universal production APK
+        run: node android.js --buildtype release prod
+
+      - name: Name APK from Gradle output metadata
+        id: apk_metadata
+        shell: bash
+        run: |
+          metadata_file=app-android/app/build/outputs/apk/tutao/release/output-metadata.json
+          apk_source=$(find artifacts/app-android -maxdepth 1 -type f -name '*.apk' -print -quit)
+          test -f "$metadata_file"
+          test -n "$apk_source"
+
+          export METADATA_FILE="$metadata_file"
+          node --input-type=module <<'NODE' >> "$GITHUB_ENV"
+          import fs from "node:fs"
+
+          const metadata = JSON.parse(fs.readFileSync(process.env.METADATA_FILE, "utf8"))
+          const output = metadata.elements?.find((element) => element.type === "SINGLE") ?? metadata.elements?.[0]
+          if (!metadata.applicationId || !output?.versionName || output?.versionCode == null) {
+            throw new Error("Gradle output metadata did not contain package, version name, and version code")
+          }
+
+          const filePart = (value) => String(value).replace(/[^A-Za-z0-9._-]/g, "_")
+          const packageName = filePart(metadata.applicationId)
+          const versionName = filePart(output.versionName)
+          const versionCode = filePart(output.versionCode)
+          console.log(`APK_PACKAGE=${packageName}`)
+          console.log(`APK_VERSION_NAME=${versionName}`)
+          console.log(`APK_VERSION_CODE=${versionCode}`)
+          console.log(`APK_FILE=${packageName}-v${versionName}-code${versionCode}-tutao-release-universal.apk`)
+          NODE
+
+          mv "$apk_source" "$APK_FILE"
+          sha256sum "$APK_FILE" > "$APK_FILE.sha256"
+
+      - name: Upload production APK and checksum
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ env.APK_PACKAGE }}-v${{ env.APK_VERSION_NAME }}-code${{ env.APK_VERSION_CODE }}-tutao-release-universal
+          path: |
+            ${{ env.APK_FILE }}
+            ${{ env.APK_FILE }}.sha256
+          if-no-files-found: error
+          retention-days: 30
