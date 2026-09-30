@@ -30,6 +30,7 @@ jobs:
     timeout-minutes: 60
     env:
       JAVA_VERSION: "21"
+      EMSCRIPTEN_VERSION: "3.1.59"
       RUST_TARGETS: "aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android"
       APK_SIGN_STORE_PASS: ${{ secrets.APK_SIGN_STORE_PASS }}
       APK_SIGN_ALIAS: ${{ secrets.APK_SIGN_ALIAS }}
@@ -70,6 +71,11 @@ jobs:
 
       - name: Install JavaScript dependencies
         run: npm ci
+
+      - name: Set up Emscripten for WebAssembly assets
+        uses: ./.github/shared/setup-emscripten
+        with:
+          emscripten-version: ${{ env.EMSCRIPTEN_VERSION }}
 
       - name: Prepare release signing keystore
         env:
